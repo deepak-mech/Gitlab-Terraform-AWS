@@ -1,0 +1,63 @@
+image: registry.gitlab.com/gitlab-org/terraform-images/stable:latest
+
+variables:
+  TF_ROOT: ${CI_PROJECT_DIR}/
+
+include:
+  - php_app.yml
+
+cache:
+  key: provider_info
+  paths:
+    - ${TF_ROOT}/.terraform
+
+before_script:
+  - cd ${TF_ROOT}
+
+stages:
+  - prepare
+  - validate
+  - build
+  - deploy
+  - destroy
+
+init:
+  stage: prepare
+  when: manual
+  script:
+    - gitlab-terraform init
+
+validate:
+  stage: validate
+  when: manual
+  script:
+    - gitlab-terraform validate
+
+plan:
+  stage: build
+  when: manual
+  script:
+    - gitlab-terraform plan
+  artifacts:
+    name: plan
+    paths:
+      - ${TF_ROOT}/plan.cache
+    
+
+apply:
+  stage: deploy
+  environment:
+    name: development
+  allow_failure: true
+  when: manual
+  script:
+    - gitlab-terraform apply -auto-approve
+  dependencies:
+    - plan
+  
+destroy:
+  stage: destroy
+  when: manual
+  allow_failure: true
+  script:
+    - gitlab-terraform destroy -auto-approve

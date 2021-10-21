@@ -1,0 +1,21 @@
+variables:
+  TF_ROOT: ${CI_PROJECT_DIR}/
+  
+deploy changes:
+  stage: .post
+  image: 
+    name: hthudimella/terraform-awscli
+    entrypoint: [""]
+  before_script:
+    - cd ${TF_ROOT}
+    - terraform init
+    - apk add openssh-client
+    - eval $(ssh-agent -s)
+    - aws s3 cp s3://my-tf-secret123/dev/developer-key.pem .
+    - chmod 400 developer-key.pem
+  script:
+    - cat index.php 
+    - export PUBLIC_IP=$(terraform output -raw wp_public_ip)
+    - ssh -o StrictHostKeyChecking=no -i developer-key.pem ec2-user@${PUBLIC_IP} "sudo chown ec2-user /var/www/html"
+    - scp -o StrictHostKeyChecking=no -i developer-key.pem index.php ec2-user@${PUBLIC_IP}:/var/www/html
+    
